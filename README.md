@@ -23,8 +23,7 @@ Define a model specification JSON as follows:
                     "concept": "my_concept_b",
                     "include_descendants": true,
                     "part": "some_part"
-                },
-                ...
+                }
             ],
             "excludes": [
                 {
@@ -36,11 +35,9 @@ Define a model specification JSON as follows:
                     "name": "my_concept_d",
                     "include_descendants": false,
                     "part": "some_part"
-                },
-                ...
+                }
             ]
-        },
-        ...
+        }
     ]
 }
 ```
