@@ -110,8 +110,8 @@ def main():
     # Write the model to a file
     model_file = Path(args.output)
     model_file.parent.mkdir(parents=True, exist_ok=True)  # Create the output directory if it doesn't exist
-    with open(args.output, 'w') as f:
-        f.write(model.to_json(indent=2))
+    model_file.write_text(model.to_json(indent=2))
+    print(f'Wrote model to {model_file}')
 
 
 if __name__ == '__main__':
