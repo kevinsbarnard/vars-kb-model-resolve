@@ -60,6 +60,16 @@ pip install -r requirements.txt
 
 ## Usage
 
+Resolve a model specification to a set of VARS knowledge base concepts:
+
 ```bash
 python resolve.py <model spec JSON>
 ```
+
+Check info of model:
+
+```bash
+python check.py <resolved model JSON>
+```
+
+If the check reports duplicates, that means your model is including the same concept in several classes.
