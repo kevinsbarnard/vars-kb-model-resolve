@@ -73,3 +73,9 @@ python check.py <resolved model JSON>
 ```
 
 If the check reports duplicates, that means your model is including the same concept in several classes.
+
+Print model in human-readable format:
+
+```bash
+python print.py <resolved model JSON>
+```
