@@ -1,0 +1,27 @@
+{
+  "name": "fish_and_crab",
+  "classes": [
+    {
+      "label": "fish",
+      "includes": [
+        {
+          "concept": "Actinopterygii",
+          "include_descendants": true,
+          "part": "self"
+        }
+      ],
+      "excludes": []
+    },
+    {
+      "label": "crab",
+      "includes": [
+        {
+          "concept": "Crustacea",
+          "include_descendants": true,
+          "part": "self"
+        }
+      ],
+      "excludes": []
+    }
+  ]
+}

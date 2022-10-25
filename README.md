@@ -9,7 +9,7 @@ Define a model specification JSON as follows:
 
 ```json
 {
-    "model_name": "my_model",
+    "name": "my_model",
     "classes": [
         {
             "label": "my_class",
@@ -27,12 +27,12 @@ Define a model specification JSON as follows:
             ],
             "excludes": [
                 {
-                    "name": "my_concept_c",
+                    "concept": "my_concept_c",
                     "include_descendants": true,
                     "part": "self"
                 },
                 {
-                    "name": "my_concept_d",
+                    "concept": "my_concept_d",
                     "include_descendants": false,
                     "part": "some_part"
                 }
