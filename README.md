@@ -1,9 +1,9 @@
 # vars-kb-model-resolve
-Specify custom model classes and resolve them to collections of VARS knowledge base concepts.
+Specify custom model classes and resolve them to collections of taxa names.
 
 Author: Kevin Barnard, [kbarnard@mbari.org](mailto:kbarnard@mbari.org)
 
-## Model specification
+## :pencil: Model specification
 
 Define a model specification JSON as follows:
 
@@ -52,19 +52,26 @@ excluding:
 - `my_concept_c` + descendant concepts and
 - `my_concept_d` parts named `my_part`.
 
-## Setup
+## :hammer: Setup
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## Usage
+## :rocket: Usage
 
-Resolve a model specification to a set of VARS knowledge base concepts:
+### Resolve 
+
+Resolve a model specification to a set of taxa names:
 
 ```bash
-python resolve.py <model spec JSON>
+python resolve.py <taxa provider> <model spec JSON>
 ```
+
+> [!NOTE]
+> The taxa provider can currently be either `kb` or `fathomnet`.
+
+### Check
 
 Check info of model:
 
@@ -73,6 +80,8 @@ python check.py <resolved model JSON>
 ```
 
 If the check reports duplicates, that means your model is including the same concept in several classes.
+
+### Print
 
 Print model in human-readable format:
 
