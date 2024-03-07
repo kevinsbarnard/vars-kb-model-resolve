@@ -6,14 +6,16 @@ import argparse
 from pathlib import Path
 from typing import Dict, List, Set
 
-from models import Model, Concept
+from models import Concept, Model
 
 
 def get_all_concepts(model: Model) -> Set[Concept]:
     """
     Get a set of all concepts in the model.
     """
-    return {concept for model_class in model.classes for concept in model_class.concepts}
+    return {
+        concept for model_class in model.classes for concept in model_class.concepts
+    }
 
 
 def get_overlapping_concepts(model: Model) -> Set[Concept]:
@@ -33,8 +35,8 @@ def get_concept_map(model: Model) -> Dict[Concept, List[str]]:
     """
     return {
         concept: [
-            model_class.label 
-            for model_class in model.classes 
+            model_class.label
+            for model_class in model.classes
             if concept in model_class.concepts
         ]
         for concept in get_overlapping_concepts(model)
@@ -45,50 +47,49 @@ def get_duplicate_concepts(model: Model) -> Dict[Concept, List[str]]:
     """
     Get a dictionary of duplicated (present in multiple classes) concept -> list of class labels.
     """
-    return dict(filter(
-        lambda pair: len(pair[1]) > 1, 
-        get_concept_map(model).items()
-    ))
+    return dict(filter(lambda pair: len(pair[1]) > 1, get_concept_map(model).items()))
 
 
 def check_model(model: Model):
     """
     Print summary info for a model.
     """
-    print(f'Name: {model.name}')
-    print(f'Classes: {len(model.classes)}')
-    print(f'Concepts: {len(get_all_concepts(model))}')
+    print(f"Name: {model.name}")
+    print(f"Classes: {len(model.classes)}")
+    print(f"Concepts: {len(get_all_concepts(model))}")
     duplicates = get_duplicate_concepts(model)
     if not duplicates:
-        print('No duplicates found.')
+        print("No duplicates found.")
     else:
-        print('Duplicates:')
+        print("Duplicates:")
         for concept, class_labels in get_duplicate_concepts(model).items():
-            print(f'  {concept.concept} ({concept.part}) is present in {len(class_labels)} classes:')
+            print(
+                f"  {concept.concept} ({concept.part}) is present in {len(class_labels)} classes:"
+            )
             for label in class_labels:
-                print(f'    {label}')
+                print(f"    {label}")
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('model', type=str, help='Model file to check.')
-    
+    parser.add_argument("model", type=str, help="Model file to check.")
+
     args = parser.parse_args()
-    
+
     # Check model file existence
     model_file = Path(args.model)
     if not model_file.is_file():
         parser.error(f'Model file "{model_file}" does not exist.')
-    
+
     # Read model
     try:
         model = Model.from_json(model_file.read_text())
     except Exception as e:
         parser.error(f'Error reading model file "{model_file}": {e}')
-    
+
     # Run check
     check_model(model)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

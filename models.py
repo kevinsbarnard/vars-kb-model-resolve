@@ -1,5 +1,5 @@
-from typing import List
 from dataclasses import dataclass
+from typing import List
 
 from dataclasses_json import dataclass_json
 
@@ -9,7 +9,7 @@ from dataclasses_json import dataclass_json
 class ConceptSpec:
     concept: str
     include_descendants: bool
-    part: str = 'self'
+    part: str = "self"
 
 
 @dataclass_json
@@ -32,7 +32,7 @@ class ModelSpec:
 class Concept:
     concept: str
     part: str
-    
+
     def __hash__(self) -> int:
         return hash((self.concept, self.part))
 
