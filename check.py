@@ -9,11 +9,22 @@ from typing import Dict, List, Set
 from models import Model, Concept
 
 
-def get_all_concepts(model: Model) -> Set[str]:
+def get_all_concepts(model: Model) -> Set[Concept]:
     """
     Get a set of all concepts in the model.
     """
     return {concept for model_class in model.classes for concept in model_class.concepts}
+
+
+def get_overlapping_concepts(model: Model) -> Set[Concept]:
+    """
+    Get a set of concepts that are present in multiple classes.
+    """
+    all_concepts = set()
+    overlapping_concepts = set()
+    for model_class in model.classes:
+        overlapping_concepts.update(all_concepts & set(model_class.concepts))
+    return overlapping_concepts
 
 
 def get_concept_map(model: Model) -> Dict[Concept, List[str]]:
@@ -26,7 +37,7 @@ def get_concept_map(model: Model) -> Dict[Concept, List[str]]:
             for model_class in model.classes 
             if concept in model_class.concepts
         ]
-        for concept in get_all_concepts(model)
+        for concept in get_overlapping_concepts(model)
     }
 
 

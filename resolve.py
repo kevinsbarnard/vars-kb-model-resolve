@@ -2,11 +2,13 @@
 Resolve model specifications.
 """
 
+from abc import ABC
 import argparse
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from requests import HTTPError
+from fathomnet.api import worms
 
 from kb import VARSKBClient
 from models import Class, ClassSpec, Concept, ConceptSpec, Model, ModelSpec
@@ -23,40 +25,100 @@ class ConceptNotFoundException(Exception):
         return f'Concept "{self.concept}" not found.'
 
 
-def get_concepts(kb_client: VARSKBClient, concept_spec: ConceptSpec) -> List[Concept]:
+class TaxaProvider(ABC):
+    """
+    Taxa provider interface.
+    """
+    
+    def get_descendants_names(self, name: str) -> List[str]:
+        """
+        Get the list of names of descendants of a given taxon name, including the given name.
+        
+        Args:
+            name: The name of the taxon.
+        
+        Returns:
+            The list of names of descendants of the taxon.
+        
+        Raises:
+            ConceptNotFoundException: If the taxon is invalid.
+        """
+        raise NotImplementedError
+
+
+class VARSKBTaxaProvider(TaxaProvider):
+    """
+    VARS Knowledge Base (KB) taxa provider.
+    """
+    
+    def __init__(self, kb_client: VARSKBClient):
+        self._kb_client = kb_client
+    
+    def get_descendants_names(self, name: str) -> Optional[List[str]]:
+        try:
+            taxa = self._kb_client.get_taxa(name)
+        except HTTPError as e:
+            if e.response.status_code == 404:
+                raise ConceptNotFoundException(name)
+            else:
+                raise e
+        else:
+            return [taxon['name'] for taxon in taxa]
+
+
+class FathomNetWoRMSTaxaProvider(TaxaProvider):
+    """
+    FathomNet-WoRMS taxa provider.
+    """
+    
+    def get_descendants_names(self, name: str) -> List[str]:
+        return worms.get_descendants_names(name)
+
+
+def get_concepts(taxa_provider: TaxaProvider, concept_spec: ConceptSpec) -> List[Concept]:
     """
     Get a list of concepts for a given concept specification. 
-    Raise an error if the concept specification is invalid.
+    
+    Args:
+        taxa_provider: The taxa provider to use for resolving taxa names.
+        concept_spec: The concept specification.
+    
+    Returns:
+        The list of concepts.
+    
+    Raises:
+        ConceptNotFoundException: If the concept is not found.
     """
     # Look up the taxa for the specified concept
-    try:
-        taxa = kb_client.get_taxa(concept_spec.concept)
-    except HTTPError as e:
-        if e.response.status_code == 404:
-            raise ConceptNotFoundException(concept_spec.concept)
-        else:
-            raise e
+    taxa_names = taxa_provider.get_descendants_names(concept_spec.concept)
     
     # Collect a list of concepts from the response
     concepts = []
-    for taxon in taxa:
-        concepts.append(Concept(taxon['name'], concept_spec.part))
+    for taxon_name in taxa_names:
+        concepts.append(Concept(taxon_name, concept_spec.part))
         if not concept_spec.include_descendants:  # The first taxon is the concept itself
             break
     
     return concepts
 
 
-def resolve_class(kb_client: VARSKBClient, class_spec: ClassSpec) -> Class:
+def resolve_class(taxa_provider: TaxaProvider, class_spec: ClassSpec) -> Class:
     """
     Resolve a class specification to a class.
+    
+    Args:
+        taxa_provider: The taxa provider to use for resolving taxa names.
+        class_spec: The class specification to resolve.
+    
+    Returns:
+        The resolved class.
     """
     concepts = set()
     
     # Union with the concepts for each include
     for concept_spec in class_spec.includes:
         try:
-            include_concepts = get_concepts(kb_client, concept_spec)
+            include_concepts = get_concepts(taxa_provider, concept_spec)
         except ConceptNotFoundException as e:
             print(e.message)
         else:
@@ -65,7 +127,7 @@ def resolve_class(kb_client: VARSKBClient, class_spec: ClassSpec) -> Class:
     # Subtract the concepts for each exclude
     for concept_spec in class_spec.excludes:
         try:
-            exclude_concepts = get_concepts(kb_client, concept_spec)
+            exclude_concepts = get_concepts(taxa_provider, concept_spec)
         except ConceptNotFoundException as e:
             print(e.message)
         else:
@@ -74,25 +136,37 @@ def resolve_class(kb_client: VARSKBClient, class_spec: ClassSpec) -> Class:
     return Class(class_spec.label, list(concepts))
 
 
-def resolve_model(kb_client: VARSKBClient, model_spec: ModelSpec) -> Model:
+def resolve_model(taxa_provider: TaxaProvider, model_spec: ModelSpec) -> Model:
     """
     Resolve a model specification to a model.
+    
+    Args:
+        taxa_provider: The taxa provider to use for resolving taxa names.
+        model_spec: The model specification to resolve.
     """
     classes = []
     
     # Resolve each class
     for class_spec in model_spec.classes:
-        classes.append(resolve_class(kb_client, class_spec))
+        classes.append(resolve_class(taxa_provider, class_spec))
     
     return Model(model_spec.name, classes)
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    subparsers = parser.add_subparsers(title="Provider", dest='provider', required=True, help='The taxa provider to use.')
+    kb_subparser = subparsers.add_parser('kb', help='Resolve a model using the VARS knowledge base API.')
+    kb_subparser.add_argument('--url', dest="kb_url", default=DEFAULT_KB_URL, help='Knowledge base URL. Default: %(default)s')
+    
+    fathomnet_subparser = subparsers.add_parser('fathomnet', help='Resolve a model using the FathomNet-WoRMS API.')
+
     parser.add_argument('model', help='Model specification file.')
     parser.add_argument('-o', '--output', default='model.json', help='Output file.')
-    parser.add_argument('--kb', default=DEFAULT_KB_URL, help='Knowledge base URL. Default: %(default)s')
+
     args = parser.parse_args()
+    
+    taxa_provider_name: str = args.provider
     
     # Load the model specification
     model_spec_file = Path(args.model)
@@ -101,11 +175,17 @@ def main():
     with open(args.model) as f:
         model_spec = ModelSpec.from_json(f.read())
     
-    # Connect to the KB
-    kb_client = VARSKBClient(args.kb)
+    if taxa_provider_name == "kb":
+        # Connect to the KB
+        kb_client = VARSKBClient(args.kb_url)
+        taxa_provider = VARSKBTaxaProvider(kb_client)
+    elif taxa_provider_name == "fathomnet":
+        taxa_provider = FathomNetWoRMSTaxaProvider()
+    else:
+        parser.error(f'Invalid taxa provider: {taxa_provider_name}')
     
     # Resolve the model
-    model = resolve_model(kb_client, model_spec)
+    model = resolve_model(taxa_provider, model_spec)
     
     # Write the model to a file
     model_file = Path(args.output)
