@@ -1,5 +1,5 @@
-from dataclasses import dataclass
-from typing import List
+from dataclasses import dataclass, field
+from typing import List, Optional
 
 from dataclasses_json import dataclass_json
 
@@ -17,7 +17,7 @@ class ConceptSpec:
 class ClassSpec:
     label: str
     includes: List[ConceptSpec]
-    excludes: List[ConceptSpec]
+    excludes: Optional[List[ConceptSpec]] = field(default_factory=list)
 
 
 @dataclass_json
